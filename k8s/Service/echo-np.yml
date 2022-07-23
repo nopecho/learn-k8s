@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: echo
+      labels:
+        app: echo
+        tier: app
+    spec:
+      containers:
+        - name: echo
+          image: ghcr.io/subicura/echo:v1
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: echo
+      tier: app
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-np
+spec:
+  selector:
+    app: echo
+    tier: app
+  ports:
+    - port: 3000
+      protocol: TCP
+      nodePort: 32000
+  type: NodePort
