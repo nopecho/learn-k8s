@@ -1,0 +1,210 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-redis
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: vote-redis
+      labels:
+        app: vote
+        tier: redis
+    spec:
+      containers:
+        - name: vote-redis
+          image: redis:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: vote
+      tier: redis
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote-redis
+spec:
+  selector:
+    app: vote
+    tier: redis
+  ports:
+    - port: 6379
+      protocol: TCP
+      
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-postgres
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: vote-postgres
+      labels:
+        app: vote
+        tier: db
+    spec:
+      containers:
+        - name: vote-postres
+          image: postgres:9.4
+          env:
+            - name: POSTGRES_USER
+              value: "k8s"
+            - name: POSTGRES_PASSWORD
+              value: "k8s"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: vote
+      tier: db
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote-postgres
+spec:
+  selector:
+    app: vote
+    tier: db
+  ports:
+    - port: 5432
+      protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-worker
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: vote-worker
+      labels:
+        app: vote
+        tier: worker
+    spec:
+      containers:
+        - name: vote-worker
+          image: ghcr.io/subicura/voting/worker:latest
+          env:
+            - name: REDIS_HOST
+              value: "vote-redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: POSTGRES_HOST
+              value: "vote-postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: vote
+      tier: worker
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: vote
+      labels:
+        app: vote
+        tier: backend
+    spec:
+      containers:
+        - name: vote
+          image: ghcr.io/subicura/voting/vote:latest
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          env:
+            - name: REDIS_HOST
+              value: "vote-redis"
+            - name: REDIS_PORT
+              value: "6379"
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: vote
+      tier: backend
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote
+spec:
+  selector:
+    app: vote
+    tier: backend
+  ports:
+    - port: 80
+      protocol: TCP
+      nodePort: 31002
+  type: NodePort
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote-result
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: vote-result
+      labels:
+        app: vote
+        tier: front
+    spec:
+      containers:
+        - name: vote-result
+          image: ghcr.io/subicura/voting/result:latest
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          env:
+            - name: POSTGRES_HOST
+              value: "vote-postgres"
+            - name: POSTGRES_PORT
+              value: "5432"
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: vote
+      tier: front
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote-result
+spec:
+  selector:
+    app: vote
+    tier: front
+  ports:
+    - port: 80
+      protocol: TCP
+      nodePort: 31001
+  type: NodePort
