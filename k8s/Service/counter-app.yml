@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: counter
+  labels:
+    app: counter
+    tier: app
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: counter
+      labels:
+        app: counter
+        tier: app
+    spec:
+      containers:
+        - name: counter
+          image: ghcr.io/subicura/counter:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: counter
+      tier: app
