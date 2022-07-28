@@ -30,4 +30,16 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 brew install kubectl
 ```
 
+* EKS
+
+EKS 클러스터 구성시 필수 배포 서비스
+
+1. cluster-autoscaler
+2. aws-node-termination-handler
+3. metrics-server
+4. nginx-ingress-admin
+5. monitoring
+   1. loki
+   2. grafana
+6. agrocd
 
